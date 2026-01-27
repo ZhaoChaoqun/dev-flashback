@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Player } from '@remotion/player';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Player, PlayerRef } from '@remotion/player';
 import { YearlyReview } from './remotion/YearlyReview';
 import { VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS, TOTAL_DURATION, defaultStats } from './remotion/Root';
 import { createGitHubClient, fetchYearlyStats } from './api/github';
@@ -33,7 +33,9 @@ function App() {
   const [backgroundMusic, setBackgroundMusic] = useState<string | undefined>(undefined);
   const [renderProgress, setRenderProgress] = useState<number | null>(null);
   const [renderStatus, setRenderStatus] = useState<string | null>(null);
-  const [renderId, setRenderId] = useState<string | null>(null);
+  const playerRef = useRef<PlayerRef>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   // Check for OAuth callback on mount
   useEffect(() => {
@@ -201,59 +203,129 @@ function App() {
   const currentStats = stats || (useDemo ? defaultStats : null);
 
   const handleExportVideo = useCallback(async () => {
-    if (!currentStats) return;
+    if (!currentStats || !playerRef.current) return;
 
     setRenderProgress(0);
-    setRenderStatus('starting');
+    setRenderStatus('preparing');
     setError(null);
 
     try {
-      // Start render
-      const response = await fetch(`${API_BASE}/api/render`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stats: currentStats, backgroundMusic }),
-      });
+      // Get the player container element
+      const playerContainer = document.querySelector('.player-wrapper');
+      if (!playerContainer) {
+        throw new Error('Player element not found');
+      }
 
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
+      // Find the canvas or video element inside the player
+      const canvas = playerContainer.querySelector('canvas');
+      const video = playerContainer.querySelector('video');
 
-      const newRenderId = data.renderId;
-      setRenderId(newRenderId);
+      let stream: MediaStream;
 
-      // Poll for progress
-      const pollProgress = async () => {
-        const progressResponse = await fetch(`${API_BASE}/api/render/${newRenderId}`);
-        const progressData = await progressResponse.json();
-
-        setRenderProgress(progressData.progress);
-        setRenderStatus(progressData.status);
-
-        if (progressData.status === 'completed') {
-          // Download the video
-          window.location.href = `${API_BASE}/api/render/${newRenderId}/download`;
-          setTimeout(() => {
-            setRenderProgress(null);
-            setRenderStatus(null);
-            setRenderId(null);
-          }, 2000);
-        } else if (progressData.status === 'error') {
-          setError(progressData.error || 'Render failed');
-          setRenderProgress(null);
-          setRenderStatus(null);
+      if (canvas) {
+        // Capture from canvas
+        stream = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(VIDEO_FPS);
+      } else if (video) {
+        // Capture from video element
+        const videoEl = video as HTMLVideoElement & { captureStream?: (fps?: number) => MediaStream };
+        if (videoEl.captureStream) {
+          stream = videoEl.captureStream(VIDEO_FPS);
         } else {
-          // Continue polling
-          setTimeout(pollProgress, 1000);
+          throw new Error('Browser does not support video capture. Please use the manual export option.');
+        }
+      } else {
+        // Fallback: use display media (screen capture of the player area)
+        throw new Error('Cannot find canvas or video element. Please use the manual export option.');
+      }
+
+      // Check if we have video tracks
+      if (stream.getVideoTracks().length === 0) {
+        throw new Error('No video track available for recording');
+      }
+
+      // Determine supported MIME type
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+        ? 'video/webm;codecs=vp8'
+        : 'video/webm';
+
+      recordedChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 8000000, // 8 Mbps for good quality
+      });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
         }
       };
 
-      pollProgress();
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentStats.user.login}-${currentStats.year}-flashback.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        setRenderProgress(100);
+        setRenderStatus('completed');
+        setTimeout(() => {
+          setRenderProgress(null);
+          setRenderStatus(null);
+        }, 2000);
+      };
+
+      mediaRecorder.onerror = () => {
+        setError('Recording failed. Please try the manual export option.');
+        setRenderProgress(null);
+        setRenderStatus(null);
+      };
+
+      // Start recording
+      setRenderStatus('recording');
+      mediaRecorder.start(100); // Collect data every 100ms
+
+      // Seek to beginning and play
+      playerRef.current.seekTo(0);
+      playerRef.current.play();
+
+      // Calculate total duration in milliseconds
+      const totalDurationMs = (TOTAL_DURATION / VIDEO_FPS) * 1000;
+
+      // Update progress during recording
+      const startTime = Date.now();
+      const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min((elapsed / totalDurationMs) * 100, 99);
+        setRenderProgress(Math.round(progress));
+      }, 100);
+
+      // Stop recording when video ends
+      const checkEnded = setInterval(() => {
+        const currentFrame = playerRef.current?.getCurrentFrame() ?? 0;
+        if (currentFrame >= TOTAL_DURATION - 1) {
+          clearInterval(checkEnded);
+          clearInterval(progressInterval);
+          setTimeout(() => {
+            mediaRecorder.stop();
+            playerRef.current?.pause();
+          }, 500); // Small delay to ensure last frames are captured
+        }
+      }, 100);
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start render');
+      setError(err instanceof Error ? err.message : 'Failed to start recording');
       setRenderProgress(null);
       setRenderStatus(null);
     }
-  }, [currentStats, backgroundMusic]);
+  }, [currentStats]);
 
   return (
     <div className="app">
@@ -432,6 +504,7 @@ function App() {
 
             <div className="player-wrapper">
               <Player
+                ref={playerRef}
                 component={YearlyReview}
                 inputProps={{ stats: currentStats, backgroundMusic }}
                 durationInFrames={TOTAL_DURATION}
@@ -488,7 +561,7 @@ function App() {
                 onClick={handleExportVideo}
                 disabled={renderProgress !== null}
               >
-                {renderProgress !== null ? `Exporting... ${renderProgress}%` : 'Export Video (MP4)'}
+                {renderProgress !== null ? `Recording... ${renderProgress}%` : 'Export Video (WebM)'}
               </button>
 
               {renderProgress !== null && (
@@ -497,9 +570,8 @@ function App() {
                     <div className="progress-fill" style={{ width: `${renderProgress}%` }} />
                   </div>
                   <span className="progress-status">
-                    {renderStatus === 'bundling' && 'Bundling assets...'}
-                    {renderStatus === 'preparing' && 'Preparing composition...'}
-                    {renderStatus === 'rendering' && 'Rendering video...'}
+                    {renderStatus === 'preparing' && 'Preparing...'}
+                    {renderStatus === 'recording' && 'Recording video (please wait)...'}
                     {renderStatus === 'completed' && 'Download starting...'}
                   </span>
                 </div>
