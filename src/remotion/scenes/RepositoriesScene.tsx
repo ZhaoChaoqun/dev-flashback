@@ -43,7 +43,7 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
         </h2>
       </div>
 
-      {/* Repository cards */}
+      {/* Repository cards with medals */}
       <div
         style={{
           display: 'flex',
@@ -71,108 +71,7 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
 
           const hoverEffect = Math.sin((frame + index * 30) * 0.05) * 5;
 
-          return (
-            <div
-              key={repo.name}
-              style={{
-                width: 450,
-                backgroundColor: '#21262d',
-                borderRadius: 16,
-                padding: 30,
-                border: '1px solid #30363d',
-                transform: `scale(${cardScale}) translateY(${hoverEffect}px)`,
-                opacity: cardOpacity,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              }}
-            >
-              {/* Repo header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <span style={{ fontSize: 28 }}>📦</span>
-                <h3
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 600,
-                    color: '#58a6ff',
-                    margin: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {repo.name}
-                </h3>
-              </div>
-
-              {/* Description */}
-              {repo.description && (
-                <p
-                  style={{
-                    fontSize: 18,
-                    color: '#8b949e',
-                    margin: 0,
-                    marginBottom: 20,
-                    lineHeight: 1.5,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {repo.description}
-                </p>
-              )}
-
-              {/* Language */}
-              {repo.primaryLanguage && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginBottom: 20,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      backgroundColor: repo.primaryLanguage.color,
-                    }}
-                  />
-                  <span style={{ fontSize: 16, color: '#8b949e' }}>{repo.primaryLanguage.name}</span>
-                </div>
-              )}
-
-              {/* Stats */}
-              <div style={{ display: 'flex', gap: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 20 }}>⭐</span>
-                  <span style={{ fontSize: 20, color: '#f0c14b', fontWeight: 600 }}>
-                    {repo.stargazerCount.toLocaleString()}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 20 }}>🍴</span>
-                  <span style={{ fontSize: 20, color: '#8b949e', fontWeight: 500 }}>
-                    {repo.forkCount.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Rank badges */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 100,
-          marginTop: 40,
-        }}
-      >
-        {['🥇', '🥈', '🥉'].slice(0, repositories.length).map((medal, index) => {
+          const medals = ['🥇', '🥈', '🥉'];
           const badgeOpacity = interpolate(frame, [80 + index * 10, 100 + index * 10], [0, 1], {
             extrapolateLeft: 'clamp',
             extrapolateRight: 'clamp',
@@ -189,14 +88,120 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
 
           return (
             <div
-              key={index}
+              key={repo.name}
               style={{
-                opacity: badgeOpacity,
-                transform: `scale(${badgeScale})`,
-                fontSize: 60,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
               }}
             >
-              {medal}
+              {/* Repo card */}
+              <div
+                style={{
+                  width: 450,
+                  minHeight: 220,
+                  backgroundColor: '#21262d',
+                  borderRadius: 16,
+                  padding: 30,
+                  border: '1px solid #30363d',
+                  transform: `scale(${cardScale}) translateY(${hoverEffect}px)`,
+                  opacity: cardOpacity,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {/* Repo header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <span style={{ fontSize: 28 }}>📦</span>
+                  <h3
+                    style={{
+                      fontSize: 28,
+                      fontWeight: 600,
+                      color: '#58a6ff',
+                      margin: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {repo.name}
+                  </h3>
+                </div>
+
+                {/* Description */}
+                <p
+                  style={{
+                    fontSize: 18,
+                    color: '#8b949e',
+                    margin: 0,
+                    marginBottom: 20,
+                    lineHeight: 1.5,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    minHeight: 54,
+                  }}
+                >
+                  {repo.description || 'No description'}
+                </p>
+
+                {/* Language */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginBottom: 20,
+                    minHeight: 20,
+                  }}
+                >
+                  {repo.primaryLanguage ? (
+                    <>
+                      <div
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          backgroundColor: repo.primaryLanguage.color,
+                        }}
+                      />
+                      <span style={{ fontSize: 16, color: '#8b949e' }}>{repo.primaryLanguage.name}</span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 16, color: '#8b949e' }}>-</span>
+                  )}
+                </div>
+
+                {/* Stats - pushed to bottom with flex grow */}
+                <div style={{ display: 'flex', gap: 24, marginTop: 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 20 }}>⭐</span>
+                    <span style={{ fontSize: 20, color: '#f0c14b', fontWeight: 600 }}>
+                      {repo.stargazerCount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 20 }}>🍴</span>
+                    <span style={{ fontSize: 20, color: '#8b949e', fontWeight: 500 }}>
+                      {repo.forkCount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Medal directly below this card */}
+              <div
+                style={{
+                  opacity: badgeOpacity,
+                  transform: `scale(${badgeScale})`,
+                  fontSize: 60,
+                  marginTop: 20,
+                }}
+              >
+                {medals[index]}
+              </div>
             </div>
           );
         })}

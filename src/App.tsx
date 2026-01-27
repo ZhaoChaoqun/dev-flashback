@@ -26,9 +26,12 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [useDemo, setUseDemo] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
-  const [manualToken, setManualToken] = useState('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');
-  const [manualUsername, setManualUsername] = useState('chaoqunzhao_microsoft');
+  const [manualToken, setManualToken] = useState(import.meta.env.VITE_GITHUB_TOKEN || '');
+  const [manualUsername, setManualUsername] = useState(import.meta.env.VITE_GITHUB_USERNAME || '');
   const [backgroundMusic, setBackgroundMusic] = useState<string | undefined>(undefined);
+  const [renderProgress, setRenderProgress] = useState<number | null>(null);
+  const [renderStatus, setRenderStatus] = useState<string | null>(null);
+  const [renderId, setRenderId] = useState<string | null>(null);
 
   // Check for OAuth callback on mount
   useEffect(() => {
@@ -162,6 +165,61 @@ function App() {
   };
 
   const currentStats = stats || (useDemo ? defaultStats : null);
+
+  const handleExportVideo = useCallback(async () => {
+    if (!currentStats) return;
+
+    setRenderProgress(0);
+    setRenderStatus('starting');
+    setError(null);
+
+    try {
+      // Start render
+      const response = await fetch(`${API_BASE}/api/render`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stats: currentStats, backgroundMusic }),
+      });
+
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      const newRenderId = data.renderId;
+      setRenderId(newRenderId);
+
+      // Poll for progress
+      const pollProgress = async () => {
+        const progressResponse = await fetch(`${API_BASE}/api/render/${newRenderId}`);
+        const progressData = await progressResponse.json();
+
+        setRenderProgress(progressData.progress);
+        setRenderStatus(progressData.status);
+
+        if (progressData.status === 'completed') {
+          // Download the video
+          window.location.href = `${API_BASE}/api/render/${newRenderId}/download`;
+          setTimeout(() => {
+            setRenderProgress(null);
+            setRenderStatus(null);
+            setRenderId(null);
+          }, 2000);
+        } else if (progressData.status === 'error') {
+          setError(progressData.error || 'Render failed');
+          setRenderProgress(null);
+          setRenderStatus(null);
+        } else {
+          // Continue polling
+          setTimeout(pollProgress, 1000);
+        }
+      };
+
+      pollProgress();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start render');
+      setRenderProgress(null);
+      setRenderStatus(null);
+    }
+  }, [currentStats, backgroundMusic]);
 
   return (
     <div className="app">
@@ -372,11 +430,56 @@ function App() {
               </div>
             </div>
 
-            <div className="export-info">
-              <p>
-                To export this video, run:{' '}
-                <code>npx remotion render src/remotion/index.ts YearlyReview out/video.mp4</code>
-              </p>
+            <div className="export-section">
+              <button
+                className="btn btn-primary"
+                onClick={handleExportVideo}
+                disabled={renderProgress !== null}
+              >
+                {renderProgress !== null ? `Exporting... ${renderProgress}%` : 'Export Video (MP4)'}
+              </button>
+
+              {renderProgress !== null && (
+                <div className="render-progress">
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${renderProgress}%` }} />
+                  </div>
+                  <span className="progress-status">
+                    {renderStatus === 'bundling' && 'Bundling assets...'}
+                    {renderStatus === 'preparing' && 'Preparing composition...'}
+                    {renderStatus === 'rendering' && 'Rendering video...'}
+                    {renderStatus === 'completed' && 'Download starting...'}
+                  </span>
+                </div>
+              )}
+
+              <div className="divider" style={{ margin: '20px 0' }}>
+                <span>or</span>
+              </div>
+
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  const propsData = JSON.stringify({ stats: currentStats, backgroundMusic }, null, 2);
+                  const blob = new Blob([propsData], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'video-props.json';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Download Props JSON (Manual Export)
+              </button>
+              <div className="export-info">
+                <p>Manual export instructions:</p>
+                <ol>
+                  <li>Click "Download Props JSON" above</li>
+                  <li>Move the file to project root</li>
+                  <li>Run: <code>npx remotion render src/remotion/index.ts YearlyReview out/video.mp4 --props=./video-props.json</code></li>
+                </ol>
+              </div>
             </div>
           </div>
         )}
