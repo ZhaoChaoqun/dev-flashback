@@ -28,14 +28,10 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [useDemo, setUseDemo] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
-  const [manualToken, setManualToken] = useState(import.meta.env.VITE_GITHUB_TOKEN || '');
-  const [manualUsername, setManualUsername] = useState(import.meta.env.VITE_GITHUB_USERNAME || '');
+  const [manualToken, setManualToken] = useState('');
+  const [manualUsername, setManualUsername] = useState('');
   const [backgroundMusic, setBackgroundMusic] = useState<string | undefined>(undefined);
-  const [renderProgress, setRenderProgress] = useState<number | null>(null);
-  const [renderStatus, setRenderStatus] = useState<string | null>(null);
   const playerRef = useRef<PlayerRef>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
 
   // Check for OAuth callback on mount
   useEffect(() => {
@@ -202,130 +198,17 @@ function App() {
 
   const currentStats = stats || (useDemo ? defaultStats : null);
 
-  const handleExportVideo = useCallback(async () => {
-    if (!currentStats || !playerRef.current) return;
-
-    setRenderProgress(0);
-    setRenderStatus('preparing');
-    setError(null);
-
-    try {
-      // Get the player container element
-      const playerContainer = document.querySelector('.player-wrapper');
-      if (!playerContainer) {
-        throw new Error('Player element not found');
-      }
-
-      // Find the canvas or video element inside the player
-      const canvas = playerContainer.querySelector('canvas');
-      const video = playerContainer.querySelector('video');
-
-      let stream: MediaStream;
-
-      if (canvas) {
-        // Capture from canvas
-        stream = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(VIDEO_FPS);
-      } else if (video) {
-        // Capture from video element
-        const videoEl = video as HTMLVideoElement & { captureStream?: (fps?: number) => MediaStream };
-        if (videoEl.captureStream) {
-          stream = videoEl.captureStream(VIDEO_FPS);
-        } else {
-          throw new Error('Browser does not support video capture. Please use the manual export option.');
-        }
-      } else {
-        // Fallback: use display media (screen capture of the player area)
-        throw new Error('Cannot find canvas or video element. Please use the manual export option.');
-      }
-
-      // Check if we have video tracks
-      if (stream.getVideoTracks().length === 0) {
-        throw new Error('No video track available for recording');
-      }
-
-      // Determine supported MIME type
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-        ? 'video/webm;codecs=vp8'
-        : 'video/webm';
-
-      recordedChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 8000000, // 8 Mbps for good quality
-      });
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${currentStats.user.login}-${currentStats.year}-flashback.webm`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        setRenderProgress(100);
-        setRenderStatus('completed');
-        setTimeout(() => {
-          setRenderProgress(null);
-          setRenderStatus(null);
-        }, 2000);
-      };
-
-      mediaRecorder.onerror = () => {
-        setError('Recording failed. Please try the manual export option.');
-        setRenderProgress(null);
-        setRenderStatus(null);
-      };
-
-      // Start recording
-      setRenderStatus('recording');
-      mediaRecorder.start(100); // Collect data every 100ms
-
-      // Seek to beginning and play
-      playerRef.current.seekTo(0);
-      playerRef.current.play();
-
-      // Calculate total duration in milliseconds
-      const totalDurationMs = (TOTAL_DURATION / VIDEO_FPS) * 1000;
-
-      // Update progress during recording
-      const startTime = Date.now();
-      const progressInterval = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min((elapsed / totalDurationMs) * 100, 99);
-        setRenderProgress(Math.round(progress));
-      }, 100);
-
-      // Stop recording when video ends
-      const checkEnded = setInterval(() => {
-        const currentFrame = playerRef.current?.getCurrentFrame() ?? 0;
-        if (currentFrame >= TOTAL_DURATION - 1) {
-          clearInterval(checkEnded);
-          clearInterval(progressInterval);
-          setTimeout(() => {
-            mediaRecorder.stop();
-            playerRef.current?.pause();
-          }, 500); // Small delay to ensure last frames are captured
-        }
-      }, 100);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start recording');
-      setRenderProgress(null);
-      setRenderStatus(null);
-    }
-  }, [currentStats]);
+  const handleDownloadProps = useCallback(() => {
+    if (!currentStats) return;
+    const propsData = JSON.stringify({ stats: currentStats, backgroundMusic }, null, 2);
+    const blob = new Blob([propsData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentStats.user.login}-${currentStats.year}-video-props.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [currentStats, backgroundMusic]);
 
   return (
     <div className="app">
@@ -556,53 +439,28 @@ function App() {
             </div>
 
             <div className="export-section">
+              <h3>Export Video</h3>
+              <p className="export-note">
+                Video export requires running Remotion CLI locally. Follow the steps below:
+              </p>
+
               <button
                 className="btn btn-primary"
-                onClick={handleExportVideo}
-                disabled={renderProgress !== null}
+                onClick={handleDownloadProps}
               >
-                {renderProgress !== null ? `Recording... ${renderProgress}%` : 'Export Video (WebM)'}
+                Download Video Config
               </button>
 
-              {renderProgress !== null && (
-                <div className="render-progress">
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${renderProgress}%` }} />
-                  </div>
-                  <span className="progress-status">
-                    {renderStatus === 'preparing' && 'Preparing...'}
-                    {renderStatus === 'recording' && 'Recording video (please wait)...'}
-                    {renderStatus === 'completed' && 'Download starting...'}
-                  </span>
-                </div>
-              )}
-
-              <div className="divider" style={{ margin: '20px 0' }}>
-                <span>or</span>
-              </div>
-
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  const propsData = JSON.stringify({ stats: currentStats, backgroundMusic }, null, 2);
-                  const blob = new Blob([propsData], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'video-props.json';
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                Download Props JSON (Manual Export)
-              </button>
               <div className="export-info">
-                <p>Manual export instructions:</p>
+                <p><strong>How to export:</strong></p>
                 <ol>
-                  <li>Click "Download Props JSON" above</li>
-                  <li>Move the file to project root</li>
-                  <li>Run: <code>npx remotion render src/remotion/index.ts YearlyReview out/video.mp4 --props=./video-props.json</code></li>
+                  <li>Click "Download Video Config" above</li>
+                  <li>Move the downloaded JSON file to the project root folder</li>
+                  <li>Run the following command in terminal:</li>
                 </ol>
+                <code className="export-command">
+                  npx remotion render src/remotion/index.ts YearlyReview out/video.mp4 --props=./video-props.json
+                </code>
               </div>
             </div>
           </div>
