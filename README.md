@@ -4,7 +4,7 @@ GitHub 年度总结视频生成器，使用 React + Vite + Remotion 构建。
 
 <div align="center">
 
-https://github.com/user-attachments/assets/demo.mp4
+https://github.com/user-attachments/assets/28541c99-fa27-4c4f-925d-1726686126e8
 
 **[点击查看 Demo 视频 ▶️](./assets/demo.mp4)**
 
