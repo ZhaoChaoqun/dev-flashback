@@ -19,9 +19,11 @@ interface AuthUser {
 function App() {
   const [token, setToken] = useState('');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [year, setYear] = useState(new Date().getFullYear());
+  // Default to previous year for annual review (users typically want to review completed years)
+  const [year, setYear] = useState(new Date().getFullYear() - 1);
   const [stats, setStats] = useState<YearlyStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [authLoading, setAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useDemo, setUseDemo] = useState(false);
@@ -35,6 +37,9 @@ function App() {
 
   // Check for OAuth callback on mount
   useEffect(() => {
+    // Ensure loading is always false on initial page load
+    setLoading(false);
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
 
@@ -120,17 +125,32 @@ function App() {
     }
 
     setLoading(true);
+    setLoadingProgress(0);
     setError(null);
+
+    // Simulate progress during API fetch
+    const progressInterval = setInterval(() => {
+      setLoadingProgress((prev) => {
+        if (prev >= 90) return prev; // Cap at 90% until complete
+        return prev + Math.random() * 15;
+      });
+    }, 300);
 
     try {
       const client = createGitHubClient(accessToken);
       const fetchedStats = await fetchYearlyStats(client, username, year);
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      // Small delay to show 100% before hiding
+      await new Promise((resolve) => setTimeout(resolve, 300));
       setStats(fetchedStats);
       setUseDemo(false);
     } catch (err) {
+      clearInterval(progressInterval);
       setError(err instanceof Error ? err.message : 'Failed to fetch GitHub stats');
     } finally {
       setLoading(false);
+      setLoadingProgress(0);
     }
   }, [token, manualToken, authUser, manualUsername, year]);
 
@@ -144,17 +164,31 @@ function App() {
     setShowManualInput(false);
 
     setLoading(true);
+    setLoadingProgress(0);
     setError(null);
+
+    // Simulate progress during API fetch
+    const progressInterval = setInterval(() => {
+      setLoadingProgress((prev) => {
+        if (prev >= 90) return prev;
+        return prev + Math.random() * 15;
+      });
+    }, 300);
 
     try {
       const client = createGitHubClient(manualToken);
       const fetchedStats = await fetchYearlyStats(client, manualUsername, year);
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 300));
       setStats(fetchedStats);
       setUseDemo(false);
     } catch (err) {
+      clearInterval(progressInterval);
       setError(err instanceof Error ? err.message : 'Failed to fetch GitHub stats');
     } finally {
       setLoading(false);
+      setLoadingProgress(0);
     }
   }, [manualToken, manualUsername, year]);
 
@@ -326,8 +360,17 @@ function App() {
                         onClick={handleManualSubmit}
                         disabled={loading}
                       >
-                        {loading ? 'Loading...' : 'Generate Video'}
+                        {loading ? `Generating... ${Math.round(loadingProgress)}%` : 'Generate Video'}
                       </button>
+
+                      {loading && (
+                        <div className="render-progress">
+                          <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: `${loadingProgress}%` }} />
+                          </div>
+                          <span className="progress-status">Fetching your GitHub data...</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
@@ -347,8 +390,17 @@ function App() {
                   </div>
 
                   <button className="btn btn-primary" onClick={handleFetchStats} disabled={loading}>
-                    {loading ? 'Generating...' : 'Generate My Video'}
+                    {loading ? `Generating... ${Math.round(loadingProgress)}%` : 'Generate My Video'}
                   </button>
+
+                  {loading && (
+                    <div className="render-progress">
+                      <div className="progress-bar">
+                        <div className="progress-fill" style={{ width: `${loadingProgress}%` }} />
+                      </div>
+                      <span className="progress-status">Fetching your GitHub data...</span>
+                    </div>
+                  )}
                 </>
               )}
 
