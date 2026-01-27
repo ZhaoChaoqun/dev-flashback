@@ -1,0 +1,19 @@
+{
+  "name": "dev-flashback-render-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build:remotion": "remotion bundle src/remotion/index.ts --out-dir=remotion-bundle"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.410",
+    "@remotion/renderer": "^4.0.410",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.410",
+    "uuid": "^11.1.0"
+  }
+}

@@ -1,15 +1,16 @@
 # 部署指南
 
-本文档介绍如何将 Dev Flashback 部署到 Azure Static Web Apps。
+本文档介绍如何将 Dev Flashback 部署到 Azure。
 
 ## 目录
 
 - [前置条件](#前置条件)
 - [Azure 资源创建](#azure-资源创建)
-- [部署方式](#部署方式)
+- [部署前端（Static Web Apps）](#部署前端static-web-apps)
   - [方式一：使用部署脚本（推荐）](#方式一使用部署脚本推荐)
   - [方式二：手动部署](#方式二手动部署)
   - [方式三：GitHub Actions 自动部署](#方式三github-actions-自动部署)
+- [部署渲染服务器（Container Apps）](#部署渲染服务器container-apps)
 - [配置 GitHub OAuth（可选）](#配置-github-oauth可选)
 - [常见问题](#常见问题)
 
@@ -18,7 +19,8 @@
 1. **Azure 账号** - [免费注册](https://azure.microsoft.com/free/)
 2. **Azure CLI** - [安装指南](https://docs.microsoft.com/cli/azure/install-azure-cli)
 3. **Node.js 18+** - [下载](https://nodejs.org/)
-4. **SWA CLI** - Azure Static Web Apps CLI
+4. **Docker** - [下载](https://www.docker.com/products/docker-desktop/)（渲染服务器需要）
+5. **SWA CLI** - Azure Static Web Apps CLI
 
 ```bash
 # 安装 SWA CLI
@@ -66,7 +68,7 @@ az staticwebapp secrets list \
 
 保存此 Token，后续部署需要使用。
 
-## 部署方式
+## 部署前端（Static Web Apps）
 
 ### 方式一：使用部署脚本（推荐）
 
@@ -145,6 +147,147 @@ jobs:
           api_location: "/api"
           skip_app_build: true
 ```
+
+## 部署渲染服务器（Container Apps）
+
+渲染服务器用于在云端生成视频，部署后用户可以直接在网页上导出 MP4 视频。
+
+### 架构说明
+
+```
+┌─────────────────┐     ┌──────────────────────┐
+│  Static Web App │────▶│  Container Apps      │
+│  (前端)          │     │  (渲染服务器)         │
+└─────────────────┘     └──────────────────────┘
+                               │
+                               ▼
+                        ┌──────────────┐
+                        │  FFmpeg +    │
+                        │  Chromium    │
+                        └──────────────┘
+```
+
+### 使用部署脚本（推荐）
+
+```bash
+# 确保已登录 Azure
+az login
+
+# 运行部署脚本
+./scripts/deploy-render-server.sh
+```
+
+脚本会自动完成以下步骤：
+1. 构建渲染服务器代码
+2. 创建 Azure Container Registry
+3. 构建并推送 Docker 镜像
+4. 创建 Container Apps 环境
+5. 部署 Container App
+
+### 手动部署
+
+如果需要手动部署，按以下步骤操作：
+
+#### 1. 构建渲染服务器
+
+```bash
+./scripts/build-render-server.sh
+```
+
+#### 2. 创建 Container Registry
+
+```bash
+az acr create \
+  --resource-group dev-flashback-rg \
+  --name devflashbackacr \
+  --sku Basic \
+  --admin-enabled true
+```
+
+#### 3. 构建并推送 Docker 镜像
+
+```bash
+cd render-server
+
+# 登录 ACR
+az acr login --name devflashbackacr
+
+# 构建镜像
+docker build -t devflashbackacr.azurecr.io/dev-flashback-render:latest .
+
+# 推送镜像
+docker push devflashbackacr.azurecr.io/dev-flashback-render:latest
+```
+
+#### 4. 创建 Container Apps 环境
+
+```bash
+az containerapp env create \
+  --name dev-flashback-env \
+  --resource-group dev-flashback-rg \
+  --location eastasia
+```
+
+#### 5. 部署 Container App
+
+```bash
+# 获取 ACR 密码
+ACR_PASSWORD=$(az acr credential show --name devflashbackacr --query "passwords[0].value" -o tsv)
+
+az containerapp create \
+  --name dev-flashback-render \
+  --resource-group dev-flashback-rg \
+  --environment dev-flashback-env \
+  --image devflashbackacr.azurecr.io/dev-flashback-render:latest \
+  --registry-server devflashbackacr.azurecr.io \
+  --registry-username devflashbackacr \
+  --registry-password "$ACR_PASSWORD" \
+  --target-port 8080 \
+  --ingress external \
+  --cpu 2 \
+  --memory 4Gi \
+  --min-replicas 0 \
+  --max-replicas 3 \
+  --env-vars "ALLOWED_ORIGIN=https://brave-wave-05556bb00.6.azurestaticapps.net"
+```
+
+### 配置前端连接渲染服务器
+
+部署渲染服务器后，需要更新前端配置：
+
+```bash
+# 获取渲染服务器 URL
+RENDER_URL=$(az containerapp show \
+  --name dev-flashback-render \
+  --resource-group dev-flashback-rg \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+echo "Render Server URL: https://$RENDER_URL"
+
+# 使用渲染服务器 URL 重新构建前端
+VITE_RENDER_API_URL="https://$RENDER_URL" npm run build
+
+# 部署前端
+./scripts/deploy.sh
+```
+
+### 渲染服务器 API
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/health` | GET | 健康检查 |
+| `/api/render` | POST | 启动渲染任务 |
+| `/api/render/:jobId` | GET | 查询渲染状态 |
+| `/api/render/:jobId/download` | GET | 下载视频 |
+
+### 费用说明
+
+Azure Container Apps 按使用量计费：
+- **CPU**: 约 ¥0.35/vCPU-秒
+- **内存**: 约 ¥0.035/GiB-秒
+- **最小副本为 0**: 空闲时不产生费用
+
+渲染一个 35 秒的视频大约需要 2-3 分钟，费用约 ¥0.5-1.0。
 
 ## 配置 GitHub OAuth（可选）
 

@@ -116,8 +116,14 @@ dev-flashback/
 │   └── auth-github-callback/  # OAuth 回调处理
 ├── docs/                 # 文档
 │   └── DEPLOY.md         # 部署指南
+├── render-server/        # 视频渲染服务器 (Azure Container Apps)
+│   ├── Dockerfile        # Docker 配置
+│   ├── server.js         # 渲染 API 服务
+│   └── package.json      # 依赖配置
 ├── scripts/              # 脚本
-│   └── deploy.sh         # Azure 部署脚本
+│   ├── deploy.sh         # 前端部署脚本
+│   ├── deploy-render-server.sh  # 渲染服务器部署脚本
+│   └── build-render-server.sh   # 渲染服务器构建脚本
 ├── server/
 │   └── index.ts          # 本地开发 OAuth 服务
 ├── src/

@@ -6,3 +6,9 @@ out
 .DS_Store
 *.log
 api/local.settings.json
+
+# Render server build artifacts
+render-server/node_modules
+render-server/src
+render-server/tsconfig.json
+render-server/output

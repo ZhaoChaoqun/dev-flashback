@@ -9,6 +9,7 @@ import './App.css';
 // Use relative path for Azure Static Web Apps (API is at /api/*)
 // Use localhost for local development
 const API_BASE = import.meta.env.DEV ? 'http://localhost:3001' : '';
+const RENDER_API_BASE = import.meta.env.VITE_RENDER_API_URL || (import.meta.env.DEV ? 'http://localhost:8080' : '');
 
 interface AuthUser {
   login: string;
@@ -31,6 +32,11 @@ function App() {
   const [manualToken, setManualToken] = useState('');
   const [manualUsername, setManualUsername] = useState('');
   const [backgroundMusic, setBackgroundMusic] = useState<string | undefined>(undefined);
+  const [renderJobId, setRenderJobId] = useState<string | null>(null);
+  const [renderStatus, setRenderStatus] = useState<string | null>(null);
+  const [renderProgress, setRenderProgress] = useState(0);
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const playerRef = useRef<PlayerRef>(null);
 
   // Check for OAuth callback on mount
@@ -209,6 +215,69 @@ function App() {
     a.click();
     URL.revokeObjectURL(url);
   }, [currentStats, backgroundMusic]);
+
+  // Poll for render job status
+  const pollRenderStatus = useCallback(async (jobId: string) => {
+    try {
+      const response = await fetch(`${RENDER_API_BASE}/api/render/${jobId}`);
+      const data = await response.json();
+
+      setRenderStatus(data.status);
+      setRenderProgress(data.progress || 0);
+
+      if (data.status === 'completed') {
+        setDownloadUrl(`${RENDER_API_BASE}${data.outputPath}`);
+        setRenderJobId(null);
+      } else if (data.status === 'failed') {
+        setRenderError(data.error || 'Render failed');
+        setRenderJobId(null);
+      } else {
+        // Continue polling
+        setTimeout(() => pollRenderStatus(jobId), 1000);
+      }
+    } catch (err) {
+      setRenderError('Failed to check render status');
+      setRenderJobId(null);
+    }
+  }, []);
+
+  // Start video render
+  const handleExportVideo = useCallback(async () => {
+    if (!currentStats) return;
+    if (!RENDER_API_BASE) {
+      setRenderError('Render server not configured. Please set VITE_RENDER_API_URL environment variable.');
+      return;
+    }
+
+    setRenderError(null);
+    setDownloadUrl(null);
+    setRenderStatus('starting');
+    setRenderProgress(0);
+
+    try {
+      const response = await fetch(`${RENDER_API_BASE}/api/render`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stats: currentStats, backgroundMusic }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start render job');
+      }
+
+      const data = await response.json();
+      setRenderJobId(data.jobId);
+      setRenderStatus(data.status);
+
+      // Start polling for status
+      pollRenderStatus(data.jobId);
+    } catch (err) {
+      setRenderError(err instanceof Error ? err.message : 'Failed to start video export');
+      setRenderStatus(null);
+    }
+  }, [currentStats, backgroundMusic, pollRenderStatus]);
 
   return (
     <div className="app">
@@ -440,23 +509,88 @@ function App() {
 
             <div className="export-section">
               <h3>Export Video</h3>
-              <p className="export-note">
-                Video export requires running Remotion CLI locally. Follow the steps below:
-              </p>
+
+              {!renderStatus && !downloadUrl && (
+                <>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleExportVideo}
+                    disabled={!!renderJobId}
+                  >
+                    Export Video (MP4)
+                  </button>
+                  <p className="export-note">
+                    Generate a high-quality MP4 video file
+                  </p>
+                </>
+              )}
+
+              {renderStatus && renderStatus !== 'completed' && (
+                <div className="render-progress">
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${renderProgress}%` }} />
+                  </div>
+                  <span className="progress-status">
+                    {renderStatus === 'starting' && 'Starting render...'}
+                    {renderStatus === 'pending' && 'Queued...'}
+                    {renderStatus === 'bundling' && 'Bundling assets...'}
+                    {renderStatus === 'preparing' && 'Preparing composition...'}
+                    {renderStatus === 'rendering' && `Rendering video... ${Math.round(renderProgress)}%`}
+                  </span>
+                </div>
+              )}
+
+              {downloadUrl && (
+                <div className="download-ready">
+                  <p className="success-message">Video ready!</p>
+                  <a
+                    href={downloadUrl}
+                    download
+                    className="btn btn-primary"
+                  >
+                    Download Video
+                  </a>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setDownloadUrl(null);
+                      setRenderStatus(null);
+                    }}
+                  >
+                    Export Again
+                  </button>
+                </div>
+              )}
+
+              {renderError && (
+                <div className="error">
+                  {renderError}
+                  <button
+                    className="btn btn-text"
+                    onClick={() => setRenderError(null)}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              <div className="export-divider">
+                <span>or export manually</span>
+              </div>
 
               <button
-                className="btn btn-primary"
+                className="btn btn-outline"
                 onClick={handleDownloadProps}
               >
                 Download Video Config
               </button>
 
               <div className="export-info">
-                <p><strong>How to export:</strong></p>
+                <p><strong>Manual export steps:</strong></p>
                 <ol>
-                  <li>Click "Download Video Config" above</li>
-                  <li>Move the downloaded JSON file to the project root folder</li>
-                  <li>Run the following command in terminal:</li>
+                  <li>Download the config file above</li>
+                  <li>Move it to the project root folder</li>
+                  <li>Run in terminal:</li>
                 </ol>
                 <code className="export-command">
                   npx remotion render src/remotion/index.ts YearlyReview out/video.mp4 --props=./video-props.json

@@ -480,6 +480,42 @@ body {
   border: 1px solid var(--border-color);
 }
 
+/* Export Section Enhancements */
+.export-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 24px 0;
+}
+
+.export-divider::before,
+.export-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-color);
+}
+
+.download-ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.download-ready .btn {
+  min-width: 200px;
+}
+
+.success-message {
+  color: var(--accent-green);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
 /* Render Progress */
 .render-progress {
   margin-top: 20px;
