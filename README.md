@@ -111,20 +111,25 @@ npm run remotion:render
 
 ```
 dev-flashback/
-├── assets/               # 静态资源（demo视频等）
+├── api/                  # Azure Functions (OAuth 后端)
+│   ├── auth-github/      # GitHub OAuth 发起
+│   └── auth-github-callback/  # OAuth 回调处理
+├── docs/                 # 文档
+│   └── DEPLOY.md         # 部署指南
+├── scripts/              # 脚本
+│   └── deploy.sh         # Azure 部署脚本
+├── server/
+│   └── index.ts          # 本地开发 OAuth 服务
 ├── src/
-│   ├── api/              # GitHub GraphQL API 服务
-│   ├── components/       # React 组件
 │   ├── remotion/
 │   │   ├── scenes/       # 视频场景组件
 │   │   ├── transitions/  # 转场效果
 │   │   ├── Root.tsx      # Remotion 配置
 │   │   └── YearlyReview.tsx  # 主视频组件
+│   ├── services/         # GitHub GraphQL API 服务
 │   ├── types/            # TypeScript 类型定义
 │   ├── App.tsx           # 主应用组件
 │   └── main.tsx          # 入口文件
-├── server/
-│   └── index.ts          # OAuth 后端服务
 ├── package.json
 ├── vite.config.ts
 └── remotion.config.ts
