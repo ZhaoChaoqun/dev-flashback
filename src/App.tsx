@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Player, PlayerRef } from '@remotion/player';
 import { YearlyReview } from './remotion/YearlyReview';
 import { VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS, TOTAL_DURATION, defaultStats } from './remotion/Root';
-import { createGitHubClient, fetchYearlyStats } from './api/github';
+import { createGitHubClient, fetchYearlyStats } from './services/github';
 import type { YearlyStats } from './types';
 import './App.css';
 
