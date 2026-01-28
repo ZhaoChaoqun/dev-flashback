@@ -1,6 +1,6 @@
 import { AbsoluteFill, Sequence, Audio, staticFile } from 'remotion';
 import type { YearlyStats } from '@/types';
-import { SCENE_DURATIONS } from './Root';
+import { SCENE_DURATIONS, type VideoOrientation } from './Root';
 import { IntroScene } from './scenes/IntroScene';
 import { ProfileScene } from './scenes/ProfileScene';
 import { ContributionsScene } from './scenes/ContributionsScene';
@@ -14,6 +14,7 @@ import { OutroScene } from './scenes/OutroScene';
 interface YearlyReviewProps {
   stats: YearlyStats;
   backgroundMusic?: string; // Optional path to background music file
+  orientation?: VideoOrientation; // Video orientation (landscape/portrait)
 }
 
 export const YearlyReview: React.FC<YearlyReviewProps> = ({ stats, backgroundMusic }) => {

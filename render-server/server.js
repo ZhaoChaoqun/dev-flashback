@@ -19,6 +19,8 @@ const renderJobs = new Map();
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:5173',
   'https://brave-wave-05556bb00.6.azurestaticapps.net',
   process.env.ALLOWED_ORIGIN,
 ].filter(Boolean);
@@ -39,11 +41,16 @@ app.get('/health', (req, res) => {
 
 // Start render job
 app.post('/api/render', async (req, res) => {
-  const { stats, backgroundMusic } = req.body;
+  const { stats, backgroundMusic, orientation, width, height } = req.body;
 
   if (!stats) {
     return res.status(400).json({ error: 'Missing stats in request body' });
   }
+
+  // Default to landscape dimensions if not specified
+  const videoWidth = width || 1920;
+  const videoHeight = height || 1080;
+  const videoOrientation = orientation || 'landscape';
 
   const jobId = uuidv4();
   const outputPath = path.join(__dirname, 'output', `${jobId}.mp4`);
@@ -77,22 +84,29 @@ app.post('/api/render', async (req, res) => {
 
       renderJobs.set(jobId, { ...renderJobs.get(jobId), status: 'preparing', progress: 20 });
 
-      // Select composition
+      // Select composition with custom dimensions
       const composition = await selectComposition({
         serveUrl: bundleLocation,
         id: 'YearlyReview',
-        inputProps: { stats, backgroundMusic },
+        inputProps: { stats, backgroundMusic, orientation: videoOrientation },
       });
+
+      // Override composition dimensions based on request
+      const compositionWithDimensions = {
+        ...composition,
+        width: videoWidth,
+        height: videoHeight,
+      };
 
       renderJobs.set(jobId, { ...renderJobs.get(jobId), status: 'rendering', progress: 25 });
 
       // Render the video
       await renderMedia({
-        composition,
+        composition: compositionWithDimensions,
         serveUrl: bundleLocation,
         codec: 'h264',
         outputLocation: outputPath,
-        inputProps: { stats, backgroundMusic },
+        inputProps: { stats, backgroundMusic, orientation: videoOrientation },
         onProgress: ({ progress }) => {
           const currentJob = renderJobs.get(jobId);
           renderJobs.set(jobId, {
