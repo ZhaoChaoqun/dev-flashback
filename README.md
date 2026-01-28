@@ -4,7 +4,7 @@ GitHub 年度总结视频生成器，使用 React + Vite + Remotion 构建。
 
 <div align="center">
 
-https://github.com/ZhaoChaoqun/dev-flashback/releases/download/v1.0.0/demo.mp4
+https://github.com/user-attachments/assets/7fc16ebf-23ba-40e3-98c1-e5c7a433df27
 
 </div>
 
