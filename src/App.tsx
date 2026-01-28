@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Player, PlayerRef } from '@remotion/player';
 import { YearlyReview } from './remotion/YearlyReview';
-import { VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_FPS, TOTAL_DURATION, defaultStats } from './remotion/Root';
+import { VIDEO_FPS, TOTAL_DURATION, defaultStats, VIDEO_DIMENSIONS, type VideoOrientation } from './remotion/Root';
 import { createGitHubClient, fetchYearlyStats } from './services/github';
 import type { YearlyStats } from './types';
 import './App.css';
@@ -32,6 +32,7 @@ function App() {
   const [manualToken, setManualToken] = useState('');
   const [manualUsername, setManualUsername] = useState('');
   const [backgroundMusic, setBackgroundMusic] = useState<string | undefined>(undefined);
+  const [videoOrientation, setVideoOrientation] = useState<VideoOrientation>('landscape');
   const [renderJobId, setRenderJobId] = useState<string | null>(null);
   const [renderStatus, setRenderStatus] = useState<string | null>(null);
   const [renderProgress, setRenderProgress] = useState(0);
@@ -203,18 +204,25 @@ function App() {
   };
 
   const currentStats = stats || (useDemo ? defaultStats : null);
+  const videoDimensions = VIDEO_DIMENSIONS[videoOrientation];
 
   const handleDownloadProps = useCallback(() => {
     if (!currentStats) return;
-    const propsData = JSON.stringify({ stats: currentStats, backgroundMusic }, null, 2);
+    const propsData = JSON.stringify({
+      stats: currentStats,
+      backgroundMusic,
+      orientation: videoOrientation,
+      width: videoDimensions.width,
+      height: videoDimensions.height,
+    }, null, 2);
     const blob = new Blob([propsData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${currentStats.user.login}-${currentStats.year}-video-props.json`;
+    a.download = `${currentStats.user.login}-${currentStats.year}-${videoOrientation}-video-props.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [currentStats, backgroundMusic]);
+  }, [currentStats, backgroundMusic, videoOrientation, videoDimensions]);
 
   // Poll for render job status
   const pollRenderStatus = useCallback(async (jobId: string) => {
@@ -260,7 +268,13 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ stats: currentStats, backgroundMusic }),
+        body: JSON.stringify({
+          stats: currentStats,
+          backgroundMusic,
+          orientation: videoOrientation,
+          width: videoDimensions.width,
+          height: videoDimensions.height,
+        }),
       });
 
       if (!response.ok) {
@@ -277,7 +291,7 @@ function App() {
       setRenderError(err instanceof Error ? err.message : 'Failed to start video export');
       setRenderStatus(null);
     }
-  }, [currentStats, backgroundMusic, pollRenderStatus]);
+  }, [currentStats, backgroundMusic, videoOrientation, videoDimensions, pollRenderStatus]);
 
   return (
     <div className="app">
@@ -458,14 +472,16 @@ function App() {
               <Player
                 ref={playerRef}
                 component={YearlyReview}
-                inputProps={{ stats: currentStats, backgroundMusic }}
+                inputProps={{ stats: currentStats, backgroundMusic, orientation: videoOrientation }}
                 durationInFrames={TOTAL_DURATION}
                 fps={VIDEO_FPS}
-                compositionWidth={VIDEO_WIDTH}
-                compositionHeight={VIDEO_HEIGHT}
+                compositionWidth={videoDimensions.width}
+                compositionHeight={videoDimensions.height}
                 style={{
                   width: '100%',
-                  aspectRatio: `${VIDEO_WIDTH} / ${VIDEO_HEIGHT}`,
+                  maxWidth: videoOrientation === 'portrait' ? '400px' : '100%',
+                  aspectRatio: `${videoDimensions.width} / ${videoDimensions.height}`,
+                  margin: '0 auto',
                 }}
                 controls
                 autoPlay
@@ -485,6 +501,29 @@ function App() {
               </select>
               <small className="audio-hint">
                 Place your audio file (e.g., bgm.mp3) in the <code>public</code> folder first
+              </small>
+            </div>
+
+            <div className="orientation-control">
+              <label>Video Orientation: </label>
+              <div className="orientation-options">
+                <button
+                  className={`orientation-btn ${videoOrientation === 'landscape' ? 'active' : ''}`}
+                  onClick={() => setVideoOrientation('landscape')}
+                >
+                  <span className="orientation-icon landscape-icon">▭</span>
+                  <span>Landscape (16:9)</span>
+                </button>
+                <button
+                  className={`orientation-btn ${videoOrientation === 'portrait' ? 'active' : ''}`}
+                  onClick={() => setVideoOrientation('portrait')}
+                >
+                  <span className="orientation-icon portrait-icon">▯</span>
+                  <span>Portrait (9:16)</span>
+                </button>
+              </div>
+              <small className="orientation-hint">
+                Portrait mode is optimized for social media (TikTok, Instagram Reels, etc.)
               </small>
             </div>
 
