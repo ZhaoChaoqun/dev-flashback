@@ -373,7 +373,7 @@ function App() {
                         <small>
                           Need a token?{' '}
                           <a
-                            href="https://github.com/settings/tokens/new?scopes=read:user,repo"
+                            href="https://github.com/settings/tokens/new?scopes=read:user,repo,read:org"
                             target="_blank"
                             rel="noopener noreferrer"
                           >
