@@ -73,8 +73,7 @@ cd "$PROJECT_ROOT/render-server"
 az acr login --name "$ACR_NAME"
 
 # Build and push
-docker build -t "$ACR_LOGIN_SERVER/$IMAGE_NAME:latest" .
-docker push "$ACR_LOGIN_SERVER/$IMAGE_NAME:latest"
+docker buildx build --platform linux/amd64 -t "$ACR_LOGIN_SERVER/$IMAGE_NAME:latest" --push .
 
 # Step 5: Create Container Apps environment if not exists
 echo -e "${GREEN}[5/6] Creating Container Apps environment...${NC}"
