@@ -8,7 +8,8 @@ interface ActivitySceneProps {
 
 export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, activeHours }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: 'clamp',
@@ -18,6 +19,19 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
   const maxDayCount = Math.max(...activeDays.map((d) => d.count));
   const maxHourCount = Math.max(...activeHours.map((h) => h.count));
 
+  // Responsive sizes
+  const titleSize = isPortrait ? 40 : 56;
+  const subtitleSize = isPortrait ? 22 : 28;
+  const dayBarWidth = isPortrait ? 36 : 50;
+  const dayBarMaxHeight = isPortrait ? 180 : 250;
+  const dayGap = isPortrait ? 10 : 16;
+  const hourBarWidth = isPortrait ? 14 : 20;
+  const hourBarMaxHeight = isPortrait ? 150 : 250;
+  const hourGap = isPortrait ? 3 : 6;
+  const chartHeight = isPortrait ? 200 : 300;
+  const legendSize = isPortrait ? 12 : 16;
+  const labelSize = isPortrait ? 10 : 14;
+
   return (
     <AbsoluteFill
       style={{
@@ -26,19 +40,19 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 60,
+        padding: isPortrait ? '50px 20px' : 60,
       }}
     >
       {/* Title */}
       <div
         style={{
           opacity: titleOpacity,
-          marginBottom: 50,
+          marginBottom: isPortrait ? 30 : 50,
         }}
       >
         <h2
           style={{
-            fontSize: 56,
+            fontSize: titleSize,
             fontWeight: 700,
             color: '#ffffff',
             margin: 0,
@@ -51,17 +65,18 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
       <div
         style={{
           display: 'flex',
-          gap: 100,
-          alignItems: 'flex-start',
+          flexDirection: isPortrait ? 'column' : 'row',
+          gap: isPortrait ? 40 : 100,
+          alignItems: isPortrait ? 'center' : 'flex-start',
         }}
       >
         {/* Days of week chart */}
         <div style={{ textAlign: 'center' }}>
           <h3
             style={{
-              fontSize: 28,
+              fontSize: subtitleSize,
               color: '#8b949e',
-              marginBottom: 30,
+              marginBottom: isPortrait ? 20 : 30,
             }}
           >
             Most Active Days
@@ -70,8 +85,8 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
             style={{
               display: 'flex',
               alignItems: 'flex-end',
-              gap: 16,
-              height: 300,
+              gap: dayGap,
+              height: chartHeight,
             }}
           >
             {activeDays.map((day, index) => {
@@ -85,7 +100,7 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
                 },
               });
 
-              const normalizedHeight = maxDayCount > 0 ? (day.count / maxDayCount) * 250 : 0;
+              const normalizedHeight = maxDayCount > 0 ? (day.count / maxDayCount) * dayBarMaxHeight : 0;
               const isWeekend = index === 0 || index === 6;
               const barColor = isWeekend ? '#a371f7' : '#58a6ff';
 
@@ -96,21 +111,21 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 10,
+                    gap: isPortrait ? 6 : 10,
                   }}
                 >
                   <div
                     style={{
-                      width: 50,
+                      width: dayBarWidth,
                       height: Math.max(normalizedHeight * barHeight, 4),
                       backgroundColor: barColor,
-                      borderRadius: 8,
+                      borderRadius: isPortrait ? 6 : 8,
                       boxShadow: `0 0 20px ${barColor}40`,
                     }}
                   />
                   <span
                     style={{
-                      fontSize: 14,
+                      fontSize: labelSize,
                       color: '#8b949e',
                       transform: 'rotate(-45deg)',
                       transformOrigin: 'center',
@@ -129,9 +144,9 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
         <div style={{ textAlign: 'center' }}>
           <h3
             style={{
-              fontSize: 28,
+              fontSize: subtitleSize,
               color: '#8b949e',
-              marginBottom: 30,
+              marginBottom: isPortrait ? 20 : 30,
             }}
           >
             Active Hours
@@ -140,8 +155,8 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
             style={{
               display: 'flex',
               alignItems: 'flex-end',
-              gap: 6,
-              height: 300,
+              gap: hourGap,
+              height: chartHeight,
             }}
           >
             {activeHours.map((hour, index) => {
@@ -155,7 +170,7 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
                 },
               });
 
-              const normalizedHeight = maxHourCount > 0 ? (hour.count / maxHourCount) * 250 : 0;
+              const normalizedHeight = maxHourCount > 0 ? (hour.count / maxHourCount) * hourBarMaxHeight : 0;
 
               // Color based on time of day
               let barColor = '#58a6ff';
@@ -170,20 +185,20 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: 5,
+                    gap: isPortrait ? 3 : 5,
                   }}
                 >
                   <div
                     style={{
-                      width: 20,
+                      width: hourBarWidth,
                       height: Math.max(normalizedHeight * barHeight, 2),
                       backgroundColor: barColor,
-                      borderRadius: 4,
+                      borderRadius: isPortrait ? 3 : 4,
                       boxShadow: `0 0 10px ${barColor}30`,
                     }}
                   />
                   {hour.hour % 6 === 0 && (
-                    <span style={{ fontSize: 12, color: '#8b949e' }}>
+                    <span style={{ fontSize: isPortrait ? 10 : 12, color: '#8b949e' }}>
                       {hour.hour === 0 ? '12a' : hour.hour === 12 ? '12p' : hour.hour < 12 ? `${hour.hour}a` : `${hour.hour - 12}p`}
                     </span>
                   )}
@@ -197,9 +212,11 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
       {/* Legend */}
       <div
         style={{
-          marginTop: 40,
+          marginTop: isPortrait ? 30 : 40,
           display: 'flex',
-          gap: 30,
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: isPortrait ? 15 : 30,
           opacity: interpolate(frame, [80, 100], [0, 1], {
             extrapolateLeft: 'clamp',
             extrapolateRight: 'clamp',
@@ -212,16 +229,16 @@ export const ActivityScene: React.FC<ActivitySceneProps> = ({ activeDays, active
           { color: '#a371f7', label: 'Evening' },
           { color: '#58a6ff', label: 'Night' },
         ].map((item) => (
-          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: isPortrait ? 5 : 8 }}>
             <div
               style={{
-                width: 16,
-                height: 16,
+                width: isPortrait ? 12 : 16,
+                height: isPortrait ? 12 : 16,
                 borderRadius: 4,
                 backgroundColor: item.color,
               }}
             />
-            <span style={{ fontSize: 16, color: '#8b949e' }}>{item.label}</span>
+            <span style={{ fontSize: legendSize, color: '#8b949e' }}>{item.label}</span>
           </div>
         ))}
       </div>

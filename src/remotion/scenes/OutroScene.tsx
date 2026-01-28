@@ -7,7 +7,8 @@ interface OutroSceneProps {
 
 export const OutroScene: React.FC<OutroSceneProps> = ({ year, username }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const textOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: 'clamp',
@@ -35,6 +36,13 @@ export const OutroScene: React.FC<OutroSceneProps> = ({ year, username }) => {
 
   // Confetti particles
   const confettiColors = ['#58a6ff', '#a371f7', '#39d353', '#f0883e', '#f0c14b', '#ec6547'];
+
+  // Responsive sizes
+  const wrapTextSize = isPortrait ? 28 : 36;
+  const yearSize = isPortrait ? 100 : 140;
+  const nameSize = isPortrait ? 24 : 32;
+  const nextYearSize = isPortrait ? 18 : 24;
+  const brandSize = isPortrait ? 16 : 20;
 
   return (
     <AbsoluteFill
@@ -91,9 +99,10 @@ export const OutroScene: React.FC<OutroSceneProps> = ({ year, username }) => {
         style={{
           opacity: textOpacity,
           textAlign: 'center',
+          padding: isPortrait ? '0 30px' : 0,
         }}
       >
-        <div style={{ fontSize: 36, color: '#8b949e', marginBottom: 20 }}>
+        <div style={{ fontSize: wrapTextSize, color: '#8b949e', marginBottom: isPortrait ? 15 : 20 }}>
           That's a wrap for
         </div>
 
@@ -104,7 +113,7 @@ export const OutroScene: React.FC<OutroSceneProps> = ({ year, username }) => {
         >
           <span
             style={{
-              fontSize: 140,
+              fontSize: yearSize,
               fontWeight: 800,
               background: 'linear-gradient(90deg, #58a6ff, #a371f7, #39d353)',
               backgroundSize: '200% 100%',
@@ -120,13 +129,13 @@ export const OutroScene: React.FC<OutroSceneProps> = ({ year, username }) => {
         <div
           style={{
             opacity: subtitleOpacity,
-            marginTop: 30,
+            marginTop: isPortrait ? 20 : 30,
           }}
         >
-          <div style={{ fontSize: 32, color: '#ffffff', marginBottom: 15 }}>
+          <div style={{ fontSize: nameSize, color: '#ffffff', marginBottom: isPortrait ? 10 : 15 }}>
             Great work, @{username}! 🎉
           </div>
-          <div style={{ fontSize: 24, color: '#8b949e' }}>
+          <div style={{ fontSize: nextYearSize, color: '#8b949e' }}>
             Here's to an even better {year + 1}!
           </div>
         </div>
@@ -136,11 +145,11 @@ export const OutroScene: React.FC<OutroSceneProps> = ({ year, username }) => {
       <div
         style={{
           position: 'absolute',
-          bottom: 50,
+          bottom: isPortrait ? 80 : 50,
           opacity: subtitleOpacity,
         }}
       >
-        <div style={{ fontSize: 20, color: '#6e7681' }}>
+        <div style={{ fontSize: brandSize, color: '#6e7681' }}>
           Generated with Dev Flashback
         </div>
       </div>

@@ -7,7 +7,8 @@ interface IntroSceneProps {
 
 export const IntroScene: React.FC<IntroSceneProps> = ({ year, username }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const titleScale = spring({
     frame,
@@ -35,6 +36,11 @@ export const IntroScene: React.FC<IntroSceneProps> = ({ year, username }) => {
   });
 
   const glowIntensity = interpolate(frame, [0, 30, 60, 90], [0, 0.5, 1, 0.8]);
+
+  // Responsive font sizes
+  const titleSize = isPortrait ? 80 : 120;
+  const yearSize = isPortrait ? 60 : 80;
+  const usernameSize = isPortrait ? 28 : 36;
 
   return (
     <AbsoluteFill
@@ -78,11 +84,12 @@ export const IntroScene: React.FC<IntroSceneProps> = ({ year, username }) => {
         style={{
           transform: `scale(${titleScale})`,
           textAlign: 'center',
+          padding: isPortrait ? '0 20px' : 0,
         }}
       >
         <h1
           style={{
-            fontSize: 120,
+            fontSize: titleSize,
             fontWeight: 800,
             color: '#ffffff',
             margin: 0,
@@ -98,12 +105,12 @@ export const IntroScene: React.FC<IntroSceneProps> = ({ year, username }) => {
         style={{
           opacity: yearOpacity,
           transform: `translateY(${yearTranslateY}px)`,
-          marginTop: 20,
+          marginTop: isPortrait ? 15 : 20,
         }}
       >
         <span
           style={{
-            fontSize: 80,
+            fontSize: yearSize,
             fontWeight: 700,
             background: 'linear-gradient(90deg, #58a6ff, #a371f7, #58a6ff)',
             backgroundSize: '200% 100%',
@@ -120,12 +127,12 @@ export const IntroScene: React.FC<IntroSceneProps> = ({ year, username }) => {
       <div
         style={{
           opacity: usernameOpacity,
-          marginTop: 30,
+          marginTop: isPortrait ? 20 : 30,
         }}
       >
         <span
           style={{
-            fontSize: 36,
+            fontSize: usernameSize,
             color: '#8b949e',
             fontWeight: 500,
           }}

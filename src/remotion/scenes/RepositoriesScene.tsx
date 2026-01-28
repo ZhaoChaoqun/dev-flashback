@@ -7,12 +7,25 @@ interface RepositoriesSceneProps {
 
 export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositories }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
+
+  // Responsive sizes
+  const titleSize = isPortrait ? 36 : 56;
+  const cardWidth = isPortrait ? 380 : 450;
+  const cardPadding = isPortrait ? 20 : 30;
+  const repoNameSize = isPortrait ? 22 : 28;
+  const descSize = isPortrait ? 14 : 18;
+  const langSize = isPortrait ? 14 : 16;
+  const statSize = isPortrait ? 16 : 20;
+  const medalSize = isPortrait ? 40 : 60;
+  const iconSize = isPortrait ? 22 : 28;
+  const cardsGap = isPortrait ? 20 : 40;
 
   return (
     <AbsoluteFill
@@ -21,19 +34,20 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: 60,
+        justifyContent: 'center',
+        padding: isPortrait ? '50px 20px' : 60,
       }}
     >
       {/* Title */}
       <div
         style={{
           opacity: titleOpacity,
-          marginBottom: 50,
+          marginBottom: isPortrait ? 30 : 50,
         }}
       >
         <h2
           style={{
-            fontSize: 56,
+            fontSize: titleSize,
             fontWeight: 700,
             color: '#ffffff',
             margin: 0,
@@ -47,10 +61,13 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
       <div
         style={{
           display: 'flex',
-          gap: 40,
+          flexDirection: isPortrait ? 'column' : 'row',
+          gap: cardsGap,
           flexWrap: 'wrap',
           justifyContent: 'center',
-          maxWidth: 1600,
+          alignItems: 'center',
+          maxWidth: isPortrait ? 450 : 1600,
+          width: '100%',
         }}
       >
         {repositories.slice(0, 3).map((repo, index) => {
@@ -91,20 +108,35 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
               key={repo.name}
               style={{
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: isPortrait ? 'row' : 'column',
                 alignItems: 'center',
+                gap: isPortrait ? 15 : 0,
               }}
             >
+              {/* Medal on left in portrait mode */}
+              {isPortrait && (
+                <div
+                  style={{
+                    opacity: badgeOpacity,
+                    transform: `scale(${badgeScale})`,
+                    fontSize: medalSize,
+                    flexShrink: 0,
+                  }}
+                >
+                  {medals[index]}
+                </div>
+              )}
+
               {/* Repo card */}
               <div
                 style={{
-                  width: 450,
-                  minHeight: 220,
+                  width: cardWidth,
+                  minHeight: isPortrait ? 160 : 220,
                   backgroundColor: '#21262d',
-                  borderRadius: 16,
-                  padding: 30,
+                  borderRadius: isPortrait ? 12 : 16,
+                  padding: cardPadding,
                   border: '1px solid #30363d',
-                  transform: `scale(${cardScale}) translateY(${hoverEffect}px)`,
+                  transform: `scale(${cardScale}) translateY(${isPortrait ? 0 : hoverEffect}px)`,
                   opacity: cardOpacity,
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                   display: 'flex',
@@ -112,11 +144,11 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
                 }}
               >
                 {/* Repo header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <span style={{ fontSize: 28 }}>📦</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isPortrait ? 8 : 12, marginBottom: isPortrait ? 10 : 16 }}>
+                  <span style={{ fontSize: iconSize }}>📦</span>
                   <h3
                     style={{
-                      fontSize: 28,
+                      fontSize: repoNameSize,
                       fontWeight: 600,
                       color: '#58a6ff',
                       margin: 0,
@@ -132,16 +164,16 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
                 {/* Description */}
                 <p
                   style={{
-                    fontSize: 18,
+                    fontSize: descSize,
                     color: '#8b949e',
                     margin: 0,
-                    marginBottom: 20,
+                    marginBottom: isPortrait ? 12 : 20,
                     lineHeight: 1.5,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
-                    minHeight: 54,
+                    minHeight: isPortrait ? 42 : 54,
                   }}
                 >
                   {repo.description || 'No description'}
@@ -153,55 +185,57 @@ export const RepositoriesScene: React.FC<RepositoriesSceneProps> = ({ repositori
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    marginBottom: 20,
-                    minHeight: 20,
+                    marginBottom: isPortrait ? 12 : 20,
+                    minHeight: isPortrait ? 16 : 20,
                   }}
                 >
                   {repo.primaryLanguage ? (
                     <>
                       <div
                         style={{
-                          width: 14,
-                          height: 14,
+                          width: isPortrait ? 10 : 14,
+                          height: isPortrait ? 10 : 14,
                           borderRadius: '50%',
                           backgroundColor: repo.primaryLanguage.color,
                         }}
                       />
-                      <span style={{ fontSize: 16, color: '#8b949e' }}>{repo.primaryLanguage.name}</span>
+                      <span style={{ fontSize: langSize, color: '#8b949e' }}>{repo.primaryLanguage.name}</span>
                     </>
                   ) : (
-                    <span style={{ fontSize: 16, color: '#8b949e' }}>-</span>
+                    <span style={{ fontSize: langSize, color: '#8b949e' }}>-</span>
                   )}
                 </div>
 
                 {/* Stats - pushed to bottom with flex grow */}
-                <div style={{ display: 'flex', gap: 24, marginTop: 'auto' }}>
+                <div style={{ display: 'flex', gap: isPortrait ? 16 : 24, marginTop: 'auto' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 20 }}>⭐</span>
-                    <span style={{ fontSize: 20, color: '#f0c14b', fontWeight: 600 }}>
+                    <span style={{ fontSize: statSize }}>⭐</span>
+                    <span style={{ fontSize: statSize, color: '#f0c14b', fontWeight: 600 }}>
                       {repo.stargazerCount.toLocaleString()}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 20 }}>🍴</span>
-                    <span style={{ fontSize: 20, color: '#8b949e', fontWeight: 500 }}>
+                    <span style={{ fontSize: statSize }}>🍴</span>
+                    <span style={{ fontSize: statSize, color: '#8b949e', fontWeight: 500 }}>
                       {repo.forkCount.toLocaleString()}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Medal directly below this card */}
-              <div
-                style={{
-                  opacity: badgeOpacity,
-                  transform: `scale(${badgeScale})`,
-                  fontSize: 60,
-                  marginTop: 20,
-                }}
-              >
-                {medals[index]}
-              </div>
+              {/* Medal below card in landscape mode */}
+              {!isPortrait && (
+                <div
+                  style={{
+                    opacity: badgeOpacity,
+                    transform: `scale(${badgeScale})`,
+                    fontSize: medalSize,
+                    marginTop: 20,
+                  }}
+                >
+                  {medals[index]}
+                </div>
+              )}
             </div>
           );
         })}

@@ -16,7 +16,8 @@ const CONTRIBUTION_COLORS: Record<string, string> = {
 
 export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contributions, year }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: 'clamp',
@@ -46,7 +47,12 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
   }));
 
   // Camera movement: pan from left to right with zoom effect
-  const cameraScale = interpolate(frame, [40, 80, 140], [1.8, 2.2, 1.5], {
+  // For portrait mode, use more aggressive zoom to fit the grid
+  const baseScale = isPortrait ? 1.2 : 1.8;
+  const maxScale = isPortrait ? 1.6 : 2.2;
+  const endScale = isPortrait ? 1.0 : 1.5;
+
+  const cameraScale = interpolate(frame, [40, 80, 140], [baseScale, maxScale, endScale], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -61,6 +67,12 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
     extrapolateRight: 'clamp',
   });
 
+  // Responsive sizes
+  const titleSize = isPortrait ? 36 : 48;
+  const countSize = isPortrait ? 80 : 120;
+  const cellSize = isPortrait ? 10 : 14;
+  const cellGap = isPortrait ? 2 : 4;
+
   return (
     <AbsoluteFill
       style={{
@@ -69,7 +81,7 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 60,
+        padding: isPortrait ? 30 : 60,
         overflow: 'hidden',
       }}
     >
@@ -77,13 +89,13 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
       <div
         style={{
           opacity: titleOpacity,
-          marginBottom: 20,
+          marginBottom: isPortrait ? 15 : 20,
           zIndex: 10,
         }}
       >
         <h2
           style={{
-            fontSize: 48,
+            fontSize: titleSize,
             fontWeight: 600,
             color: '#8b949e',
             margin: 0,
@@ -96,13 +108,13 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
       {/* Total Count */}
       <div
         style={{
-          marginBottom: 50,
+          marginBottom: isPortrait ? 30 : 50,
           zIndex: 10,
         }}
       >
         <span
           style={{
-            fontSize: 120,
+            fontSize: countSize,
             fontWeight: 800,
             background: 'linear-gradient(90deg, #39d353, #26a641)',
             WebkitBackgroundClip: 'text',
@@ -120,10 +132,10 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
           transform: `scale(${cameraScale}) translate(${cameraX}%, ${cameraY}%)`,
           transformOrigin: 'center center',
           display: 'flex',
-          gap: 4,
-          padding: 20,
+          gap: cellGap,
+          padding: isPortrait ? 12 : 20,
           backgroundColor: '#0d1117',
-          borderRadius: 12,
+          borderRadius: isPortrait ? 8 : 12,
           border: '1px solid #30363d',
           boxShadow: '0 0 60px rgba(57, 211, 83, 0.15)',
         }}
@@ -134,7 +146,7 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: 4,
+              gap: cellGap,
             }}
           >
             {week.contributionDays.map((day, dayIndex) => {
@@ -159,9 +171,9 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
                 <div
                   key={dayIndex}
                   style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 3,
+                    width: cellSize,
+                    height: cellSize,
+                    borderRadius: isPortrait ? 2 : 3,
                     backgroundColor: CONTRIBUTION_COLORS[day.contributionLevel],
                     transform: `scale(${cellScale})`,
                     boxShadow:
@@ -181,27 +193,27 @@ export const ContributionsScene: React.FC<ContributionsSceneProps> = ({ contribu
       {/* Legend */}
       <div
         style={{
-          marginTop: 30,
+          marginTop: isPortrait ? 20 : 30,
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          gap: isPortrait ? 4 : 8,
           opacity: gridOpacity,
           zIndex: 10,
         }}
       >
-        <span style={{ fontSize: 14, color: '#8b949e', marginRight: 10 }}>Less</span>
+        <span style={{ fontSize: isPortrait ? 12 : 14, color: '#8b949e', marginRight: isPortrait ? 6 : 10 }}>Less</span>
         {Object.values(CONTRIBUTION_COLORS).map((color, index) => (
           <div
             key={index}
             style={{
-              width: 14,
-              height: 14,
-              borderRadius: 3,
+              width: cellSize,
+              height: cellSize,
+              borderRadius: isPortrait ? 2 : 3,
               backgroundColor: color,
             }}
           />
         ))}
-        <span style={{ fontSize: 14, color: '#8b949e', marginLeft: 10 }}>More</span>
+        <span style={{ fontSize: isPortrait ? 12 : 14, color: '#8b949e', marginLeft: isPortrait ? 6 : 10 }}>More</span>
       </div>
     </AbsoluteFill>
   );

@@ -7,7 +7,8 @@ interface SummarySceneProps {
 
 export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: 'clamp',
@@ -53,6 +54,19 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
     },
   ];
 
+  // Responsive sizes
+  const titleSize = isPortrait ? 40 : 56;
+  const titleMargin = isPortrait ? 30 : 60;
+  const gridColumns = isPortrait ? 2 : 3;
+  const gridGap = isPortrait ? 20 : 40;
+  const cardPadding = isPortrait ? '20px 24px' : '35px 40px';
+  const iconSize = isPortrait ? 36 : 50;
+  const iconContainerSize = isPortrait ? 50 : 70;
+  const valueSize = isPortrait ? 28 : 42;
+  const labelSize = isPortrait ? 14 : 18;
+  const totalLabelSize = isPortrait ? 20 : 28;
+  const totalValueSize = isPortrait ? 28 : 36;
+
   return (
     <AbsoluteFill
       style={{
@@ -61,19 +75,19 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 60,
+        padding: isPortrait ? 30 : 60,
       }}
     >
       {/* Title */}
       <div
         style={{
           opacity: titleOpacity,
-          marginBottom: 60,
+          marginBottom: titleMargin,
         }}
       >
         <h2
           style={{
-            fontSize: 56,
+            fontSize: titleSize,
             fontWeight: 700,
             color: '#ffffff',
             margin: 0,
@@ -87,9 +101,10 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 40,
-          maxWidth: 1200,
+          gridTemplateColumns: `repeat(${gridColumns}, 1fr)`,
+          gap: gridGap,
+          maxWidth: isPortrait ? '100%' : 1200,
+          width: '100%',
         }}
       >
         {summaryItems.map((item, index) => {
@@ -119,11 +134,11 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
               key={item.label}
               style={{
                 backgroundColor: '#21262d',
-                borderRadius: 20,
-                padding: '35px 40px',
+                borderRadius: isPortrait ? 14 : 20,
+                padding: cardPadding,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 25,
+                gap: isPortrait ? 16 : 25,
                 border: '1px solid #30363d',
                 transform: `scale(${cardScale})`,
                 boxShadow: `0 0 30px ${item.color}15`,
@@ -131,14 +146,15 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
             >
               <div
                 style={{
-                  fontSize: 50,
-                  width: 70,
-                  height: 70,
+                  fontSize: iconSize,
+                  width: iconContainerSize,
+                  height: iconContainerSize,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: `${item.color}20`,
-                  borderRadius: 16,
+                  borderRadius: isPortrait ? 12 : 16,
+                  flexShrink: 0,
                 }}
               >
                 {item.icon}
@@ -146,15 +162,15 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
               <div>
                 <div
                   style={{
-                    fontSize: 42,
+                    fontSize: valueSize,
                     fontWeight: 800,
                     color: item.color,
-                    marginBottom: 5,
+                    marginBottom: isPortrait ? 2 : 5,
                   }}
                 >
                   {displayValue.toLocaleString()}
                 </div>
-                <div style={{ fontSize: 18, color: '#8b949e' }}>{item.label}</div>
+                <div style={{ fontSize: labelSize, color: '#8b949e' }}>{item.label}</div>
               </div>
             </div>
           );
@@ -164,7 +180,7 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
       {/* Total contributions highlight */}
       <div
         style={{
-          marginTop: 50,
+          marginTop: isPortrait ? 30 : 50,
           opacity: interpolate(frame, [80, 100], [0, 1], {
             extrapolateLeft: 'clamp',
             extrapolateRight: 'clamp',
@@ -172,10 +188,10 @@ export const SummaryScene: React.FC<SummarySceneProps> = ({ stats }) => {
           textAlign: 'center',
         }}
       >
-        <span style={{ fontSize: 28, color: '#8b949e' }}>Total Contributions: </span>
+        <span style={{ fontSize: totalLabelSize, color: '#8b949e' }}>Total Contributions: </span>
         <span
           style={{
-            fontSize: 36,
+            fontSize: totalValueSize,
             fontWeight: 800,
             background: 'linear-gradient(90deg, #39d353, #26a641)',
             WebkitBackgroundClip: 'text',

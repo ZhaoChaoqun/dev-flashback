@@ -13,7 +13,8 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
   mostProductiveDay,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   const titleOpacity = interpolate(frame, [0, 20], [0, 1], {
     extrapolateLeft: 'clamp',
@@ -48,6 +49,19 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
   };
 
+  // Responsive sizes
+  const titleSize = isPortrait ? 40 : 56;
+  const iconSize = isPortrait ? 45 : 60;
+  const numberSize = isPortrait ? 60 : 80;
+  const labelSize = isPortrait ? 20 : 24;
+  const subLabelSize = isPortrait ? 14 : 18;
+  const cardPadding = isPortrait ? '30px 40px' : '40px 60px';
+  const cardGap = isPortrait ? 30 : 60;
+  const productiveIconSize = isPortrait ? 36 : 50;
+  const productiveLabelSize = isPortrait ? 18 : 22;
+  const productiveValueSize = isPortrait ? 24 : 32;
+  const productiveCountSize = isPortrait ? 16 : 20;
+
   return (
     <AbsoluteFill
       style={{
@@ -56,19 +70,19 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 60,
+        padding: isPortrait ? '60px 30px' : 60,
       }}
     >
       {/* Title */}
       <div
         style={{
           opacity: titleOpacity,
-          marginBottom: 60,
+          marginBottom: isPortrait ? 40 : 60,
         }}
       >
         <h2
           style={{
-            fontSize: 56,
+            fontSize: titleSize,
             fontWeight: 700,
             color: '#ffffff',
             margin: 0,
@@ -82,16 +96,17 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
       <div
         style={{
           display: 'flex',
-          gap: 60,
-          marginBottom: 60,
+          flexDirection: isPortrait ? 'column' : 'row',
+          gap: cardGap,
+          marginBottom: isPortrait ? 40 : 60,
         }}
       >
         {/* Longest Streak */}
         <div
           style={{
             backgroundColor: '#21262d',
-            borderRadius: 24,
-            padding: '40px 60px',
+            borderRadius: isPortrait ? 20 : 24,
+            padding: cardPadding,
             textAlign: 'center',
             border: '2px solid #f0883e',
             boxShadow: '0 0 40px rgba(240, 136, 62, 0.2)',
@@ -102,27 +117,27 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
             })})`,
           }}
         >
-          <div style={{ fontSize: 60, marginBottom: 10 }}>🔥</div>
+          <div style={{ fontSize: iconSize, marginBottom: isPortrait ? 8 : 10 }}>🔥</div>
           <div
             style={{
-              fontSize: 80,
+              fontSize: numberSize,
               fontWeight: 800,
               color: '#f0883e',
-              marginBottom: 10,
+              marginBottom: isPortrait ? 8 : 10,
             }}
           >
             {Math.round(longestStreak * Math.min(longestStreakCount, 1))}
           </div>
-          <div style={{ fontSize: 24, color: '#8b949e' }}>Longest Streak</div>
-          <div style={{ fontSize: 18, color: '#6e7681', marginTop: 5 }}>days in a row</div>
+          <div style={{ fontSize: labelSize, color: '#8b949e' }}>Longest Streak</div>
+          <div style={{ fontSize: subLabelSize, color: '#6e7681', marginTop: 5 }}>days in a row</div>
         </div>
 
         {/* Current Streak */}
         <div
           style={{
             backgroundColor: '#21262d',
-            borderRadius: 24,
-            padding: '40px 60px',
+            borderRadius: isPortrait ? 20 : 24,
+            padding: cardPadding,
             textAlign: 'center',
             border: '2px solid #39d353',
             boxShadow: '0 0 40px rgba(57, 211, 83, 0.2)',
@@ -133,19 +148,19 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
             })})`,
           }}
         >
-          <div style={{ fontSize: 60, marginBottom: 10 }}>⚡</div>
+          <div style={{ fontSize: iconSize, marginBottom: isPortrait ? 8 : 10 }}>⚡</div>
           <div
             style={{
-              fontSize: 80,
+              fontSize: numberSize,
               fontWeight: 800,
               color: '#39d353',
-              marginBottom: 10,
+              marginBottom: isPortrait ? 8 : 10,
             }}
           >
             {Math.round(currentStreak * Math.min(currentStreakCount, 1))}
           </div>
-          <div style={{ fontSize: 24, color: '#8b949e' }}>Current Streak</div>
-          <div style={{ fontSize: 18, color: '#6e7681', marginTop: 5 }}>keep going!</div>
+          <div style={{ fontSize: labelSize, color: '#8b949e' }}>Current Streak</div>
+          <div style={{ fontSize: subLabelSize, color: '#6e7681', marginTop: 5 }}>keep going!</div>
         </div>
       </div>
 
@@ -155,21 +170,21 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
           style={{
             opacity: productiveDayOpacity,
             backgroundColor: '#21262d',
-            borderRadius: 20,
-            padding: '30px 50px',
+            borderRadius: isPortrait ? 16 : 20,
+            padding: isPortrait ? '20px 30px' : '30px 50px',
             display: 'flex',
             alignItems: 'center',
-            gap: 30,
+            gap: isPortrait ? 20 : 30,
             border: '1px solid #30363d',
           }}
         >
-          <div style={{ fontSize: 50 }}>🏆</div>
+          <div style={{ fontSize: productiveIconSize }}>🏆</div>
           <div>
-            <div style={{ fontSize: 22, color: '#8b949e', marginBottom: 5 }}>Most Productive Day</div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: '#ffffff' }}>
+            <div style={{ fontSize: productiveLabelSize, color: '#8b949e', marginBottom: 5 }}>Most Productive Day</div>
+            <div style={{ fontSize: productiveValueSize, fontWeight: 700, color: '#ffffff' }}>
               {formatDate(mostProductiveDay.date)}
             </div>
-            <div style={{ fontSize: 20, color: '#58a6ff', marginTop: 5 }}>
+            <div style={{ fontSize: productiveCountSize, color: '#58a6ff', marginTop: 5 }}>
               {mostProductiveDay.contributionCount} contributions
             </div>
           </div>
@@ -186,7 +201,7 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
           overflow: 'hidden',
         }}
       >
-        {Array.from({ length: 20 }).map((_, i) => {
+        {Array.from({ length: isPortrait ? 15 : 20 }).map((_, i) => {
           const baseX = 30 + (i * 40) % 60;
           const yOffset = ((frame * 2 + i * 30) % 200);
           const opacity = interpolate(yOffset, [0, 100, 200], [0, 0.6, 0]);
@@ -198,7 +213,7 @@ export const StreaksScene: React.FC<StreaksSceneProps> = ({
                 position: 'absolute',
                 left: `${baseX}%`,
                 bottom: yOffset,
-                fontSize: 24,
+                fontSize: isPortrait ? 18 : 24,
                 opacity,
                 transform: `scale(${0.5 + Math.sin(frame * 0.1 + i) * 0.3})`,
               }}
